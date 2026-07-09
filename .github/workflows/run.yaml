@@ -1,0 +1,31 @@
+name: Run OCI Instance Creator
+
+on:
+  workflow_dispatch:
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create OCI key file
+        run: |
+          echo "${{ secrets.OCI_PRIVATE_KEY }}" > oci.key
+          chmod 600 oci.key
+
+      - name: Run OCI Instance Creator
+        run: |
+          docker run --rm \
+            -v "$PWD/oci.key:/keys/oci.key" \
+            -e OCI_USER_ID="${{ secrets.OCI_USER_ID }}" \
+            -e OCI_TENANCY_ID="${{ secrets.OCI_TENANCY_ID }}" \
+            -e OCI_SUBNET_ID="${{ secrets.OCI_SUBNET_ID }}" \
+            -e OCI_IMAGE_ID="${{ secrets.OCI_IMAGE_ID }}" \
+            -e OCI_REGION="${{ secrets.OCI_REGION }}" \
+            -e OCI_FINGERPRINT="${{ secrets.OCI_FINGERPRINT }}" \
+            -e SSH_KEY="${{ secrets.SSH_KEY }}" \
+            mowirth/oci-instance-creator
