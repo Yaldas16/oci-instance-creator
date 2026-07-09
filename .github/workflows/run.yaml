@@ -9,19 +9,43 @@ jobs:
     timeout-minutes: 360
 
     steps:
-      - name: Create OCI key file
+      - name: Install OCI CLI
+        run: pip install oci-cli
+
+      - name: Create OCI config
         run: |
-          echo "${{ secrets.OCI_PRIVATE_KEY }}" > oci.key
-          chmod 600 oci.key
+          mkdir -p ~/.oci
+          echo "${{ secrets.OCI_PRIVATE_KEY }}" > ~/.oci/oci_api_key.pem
+          chmod 600 ~/.oci/oci_api_key.pem
+          cat > ~/.oci/config <<EOF
+          [DEFAULT]
+          user=${{ secrets.OCI_USER }}
+          fingerprint=${{ secrets.OCI_FINGERPRINT }}
+          tenancy=${{ secrets.OCI_TENANCY }}
+          region=${{ secrets.OCI_REGION }}
+          key_file=~/.oci/oci_api_key.pem
+          EOF
+
+      - name: Find latest Ubuntu ARM image
+        run: |
+          IMAGE_ID=$(oci compute image list \
+            --compartment-id "${{ secrets.OCI_COMPARTMENT_ID }}" \
+            --operating-system "Canonical Ubuntu" \
+            --shape "VM.Standard.A1.Flex" \
+            --sort-by TIMECREATED \
+            --sort-order DESC \
+            --query "data[?contains(\"display-name\", '24.04')][0].id" \
+            --raw-output)
+          echo "IMAGE_ID=$IMAGE_ID" >> $GITHUB_ENV
 
       - name: Run OCI Instance Creator
         run: |
           docker run --rm \
-            -v "$PWD/oci.key:/keys/oci.key" \
+            -v "$HOME/.oci/oci_api_key.pem:/keys/oci.key" \
             -e OCI_USER_ID="${{ secrets.OCI_USER }}" \
             -e OCI_TENANCY_ID="${{ secrets.OCI_TENANCY }}" \
             -e OCI_SUBNET_ID="${{ secrets.OCI_SUBNET_ID }}" \
-            -e OCI_IMAGE_ID="${{ secrets.OCI_IMAGE_ID }}" \
+            -e OCI_IMAGE_ID="$IMAGE_ID" \
             -e OCI_REGION="${{ secrets.OCI_REGION }}" \
             -e OCI_FINGERPRINT="${{ secrets.OCI_FINGERPRINT }}" \
             -e SSH_KEY="${{ secrets.SSH_AUTHORIZED_KEYS }}" \
