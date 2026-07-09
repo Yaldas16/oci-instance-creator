@@ -9,9 +9,6 @@ jobs:
     timeout-minutes: 360
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
       - name: Create OCI key file
         run: |
           echo "${{ secrets.OCI_PRIVATE_KEY }}" > oci.key
@@ -21,11 +18,11 @@ jobs:
         run: |
           docker run --rm \
             -v "$PWD/oci.key:/keys/oci.key" \
-            -e OCI_USER_ID="${{ secrets.OCI_USER_ID }}" \
-            -e OCI_TENANCY_ID="${{ secrets.OCI_TENANCY_ID }}" \
+            -e OCI_USER_ID="${{ secrets.OCI_USER }}" \
+            -e OCI_TENANCY_ID="${{ secrets.OCI_TENANCY }}" \
             -e OCI_SUBNET_ID="${{ secrets.OCI_SUBNET_ID }}" \
             -e OCI_IMAGE_ID="${{ secrets.OCI_IMAGE_ID }}" \
             -e OCI_REGION="${{ secrets.OCI_REGION }}" \
             -e OCI_FINGERPRINT="${{ secrets.OCI_FINGERPRINT }}" \
-            -e SSH_KEY="${{ secrets.SSH_KEY }}" \
+            -e SSH_KEY="${{ secrets.SSH_AUTHORIZED_KEYS }}" \
             mowirth/oci-instance-creator
